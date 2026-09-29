@@ -18,14 +18,14 @@ app.use(cors({
 app.use(express.json());
 
 const applicationId = process.env.VONAGE_APPLICATION_ID;
-const privateKeyPath = process.env.VONAGE_PRIVATE_KEY_PATH;
+const privateKeyPath = path.resolve(process.env.VONAGE_PRIVATE_KEY_PATH);
 
 if (!applicationId || !privateKeyPath) {
   console.error("Missing required environment variables.");
   process.exit(1);
 }
 
-const privateKey = fs.readFileSync(path.resolve(privateKeyPath));
+const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
 const vonage = new Vonage({ applicationId, privateKey });
 
 // In-memory session lookup: roomName -> sessionId
@@ -59,7 +59,11 @@ app.post('/api/session/join', async (req, res) => {
     res.json({ applicationId, sessionId, token, userId });
   } catch (err) {
     console.error('Session join failure:', err);
-    res.status(500).json({ error: 'Failed to join session' });
+    res.status(500).json({
+      error: 'Failed to join session',
+      details: err.message,
+      stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+    });
   }
 });
 
