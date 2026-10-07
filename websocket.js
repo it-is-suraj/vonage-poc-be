@@ -15,40 +15,36 @@ export function setupAudioConnectorWebSocket(server) {
   });
 
   wss.on('connection', (ws, req) => {
-    console.log('[AudioConnector] Client connected from:', req.socket.remoteAddress);
-    let sessionMetadata = null;
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const userId = url.searchParams.get('userId') || req.headers['x-user-id'] || 'unknown_user';
+    const streamId = url.searchParams.get('streamId') || req.headers['x-stream-id'] || 'unknown_stream';
+    const sessionId = url.searchParams.get('sessionId') || req.headers['x-session-id'] || 'unknown_session';
+
+    console.log(`[AudioConnector WSS] Connected -> User: ${userId} | Stream: ${streamId} | Session: ${sessionId}`);
 
     ws.on('message', (data, isBinary) => {
       if (!isBinary) {
-        // Text messages: Metadata, handshake, or control signals
         try {
           const message = JSON.parse(data.toString());
-          console.log('[AudioConnector] Control/Metadata event:', message);
-
-          // Example handshake message contains event info (e.g., websocket connected/session info)
-          if (message.event === 'start' || message.sessionId) {
-            sessionMetadata = message;
-          }
+          console.log(`[AudioConnector Control][${userId}]:`, message);
         } catch (err) {
           console.error('[AudioConnector] Failed to parse text message:', err);
         }
       } else {
-        // Binary frames: 16-bit signed PCM audio at 16,000 Hz
-        // data is a Buffer containing raw audio samples
-        handleIncomingAudioChunk(data, sessionMetadata);
+        handleIncomingAudioChunk(data, { userId, streamId, sessionId });
       }
     });
 
     ws.on('close', (code, reason) => {
-      console.log(`[AudioConnector] Disconnected: ${code} - ${reason.toString()}`);
+      console.log(`[AudioConnector WSS] Disconnected -> User: ${userId} (${code})`);
     });
 
     ws.on('error', (err) => {
-      console.error('[AudioConnector] Socket error:', err);
+      console.error(`[AudioConnector WSS Error][${userId}]:`, err);
     });
   });
 }
 
-function handleIncomingAudioChunk(pcmChunk, metadata) {
-  // Pass chunk to your STT transcription stream (see Step 4)
+function handleIncomingAudioChunk(pcmChunk, { userId, streamId, sessionId }) {
+  // Feed this to User-tagged STT Pipeline
 }
