@@ -45,9 +45,7 @@ export function setupAudioConnectorWebSocket(server) {
           const kbReceived = (totalBytes / 1024).toFixed(1);
           const rateKbps = (kbReceived / elapsedSec).toFixed(1);
 
-          console.log(
-            `[AUDIO STREAMING] User: "${userId}" | Chunks: ${chunkCount} | Received: ${kbReceived} KB | Elapsed: ${elapsedSec}s (~${rateKbps} KB/s)`
-          );
+          console.log("data: ", data);
         }
 
         // handleIncomingAudioChunk(data, { userId, streamId, sessionId });
