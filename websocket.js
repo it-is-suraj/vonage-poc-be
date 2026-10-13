@@ -56,7 +56,7 @@ export function setupAudioConnectorWebSocket(server) {
     const cleanup = () => {
       if (audioStream && !audioStream.writableEnded) {
         audioStream.end();
-        console.log(`[AudioConnector Stream] Saved ${fileName} (${chunkCount} chunks, ${totalBytes} bytes).`);
+        console.log(`[AudioFile] ${fileName} Saved.`);
       }
     }
 

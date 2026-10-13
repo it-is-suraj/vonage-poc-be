@@ -1,11 +1,13 @@
 import 'dotenv/config';
 
+import fs from 'fs';
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import vonage, { applicationId } from './vonage.js';
-import { setupAudioConnectorWebSocket } from './websocket.js';
+import { RECORDINGS_DIR, setupAudioConnectorWebSocket } from './websocket.js';
 import { startParticipantAudioConnector, stopParticipantAudioConnector } from './audio-connector.js';
+import path from 'path';
 
 const app = express();
 const server = http.createServer(app);
