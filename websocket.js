@@ -1,4 +1,15 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export const RECORDINGS_DIR = path.join(__dirname, 'recordings');
+if (!fs.existsSync(RECORDINGS_DIR)) {
+  fs.mkdirSync(RECORDINGS_DIR, { recursive: true });
+}
 
 export function setupAudioConnectorWebSocket(server) {
   const wss = new WebSocketServer({ noServer: true });
@@ -22,9 +33,10 @@ export function setupAudioConnectorWebSocket(server) {
 
     console.log(`[AudioConnector WSS] Connected -> User: ${userId} | Stream: ${streamId} | Session: ${sessionId}`);
 
-    let chunkCount = 0;
-    let totalBytes = 0;
-    const startTime = Date.now();
+    const timestamp = Date.now();
+    const fileName = `call_${userId}_${timestamp}.raw`;
+    const audioFilePath = path.join(RECORDINGS_DIR, fileName);
+    const audioStream = fs.createWriteStream(audioFilePath, { flags: 'a' });
 
     ws.on('message', (data, isBinary) => {
       if (!isBinary) {
@@ -36,28 +48,26 @@ export function setupAudioConnectorWebSocket(server) {
           console.error('[AudioConnector] Failed to parse text message:', err);
         }
       } else {
-        chunkCount++;
-        totalBytes += data.length;
-
-        // Log progress every 50 chunks (~1 to 2 seconds of audio)
-        if (chunkCount % 50 === 0) {
-          const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
-          const kbReceived = (totalBytes / 1024).toFixed(1);
-          const rateKbps = (kbReceived / elapsedSec).toFixed(1);
-
-          console.log("data: ", data);
-        }
-
+        audioStream.write(data);
         // handleIncomingAudioChunk(data, { userId, streamId, sessionId });
       }
     });
 
+    const cleanup = () => {
+      if (audioStream && !audioStream.writableEnded) {
+        audioStream.end();
+        console.log(`[AudioConnector Stream] Saved ${fileName} (${chunkCount} chunks, ${totalBytes} bytes).`);
+      }
+    }
+
     ws.on('close', (code, reason) => {
       console.log(`[AudioConnector WSS] Disconnected -> User: ${userId} (${code})`);
+      cleanup();
     });
 
     ws.on('error', (err) => {
       console.error(`[AudioConnector WSS Error][${userId}]:`, err);
+      cleanup();
     });
   });
 }

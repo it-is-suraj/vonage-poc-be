@@ -103,6 +103,37 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/recordings', (req, res) => {
+  try {
+    const files = fs.readdirSync(RECORDINGS_DIR).map(fileName => {
+      const stats = fs.statSync(path.join(RECORDINGS_DIR, fileName));
+      return {
+        fileName,
+        sizeBytes: stats.size,
+        createdAt: stats.birthtime
+      };
+    });
+    res.json({ recordings: files });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve recordings', details: err.message });
+  }
+});
+
+app.get('/recordings/:fileName', (req, res) => {
+  const fileName = path.basename(req.params.fileName); // sanitize filename
+  const filePath = path.join(RECORDINGS_DIR, fileName);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('Recording not found');
+  }
+
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+  const readStream = fs.createReadStream(filePath);
+  readStream.pipe(res);
+});
+
 setupAudioConnectorWebSocket(server);
 
 server.listen(process.env.PORT || 5000, () => {
